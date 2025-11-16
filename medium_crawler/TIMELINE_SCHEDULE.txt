@@ -1,0 +1,26 @@
+MEDIUM.COM CRAWLER - 3 DAY DEVELOPMENT TIMELINE
+==================================================
+
+PROJECT OVERVIEW
+Assignment: Medium.com Crawling and Admin Panel Implementation
+Total Time: 9 hours (3 hours per day for 3 days)
+Framework: Django with Bootstrap UI
+
+
+PHASE 1 (DAY 1): Basic functionality that runs
+- Project setup and configuration
+- Core models and database structure
+- Basic crawling capability
+- Simple UI implementation
+
+PHASE 2 (DAY 2): Advanced feature implementation
+- Real-time updates and progress tracking
+- Enhanced UI and user experience
+- Performance optimizations
+- Additional features beyond basic requirements
+
+PHASE 3 (DAY 3): Skills demonstration and polish
+- Testing implementation
+- Bonus feature integration
+- Code quality improvements
+- Documentation and final touches

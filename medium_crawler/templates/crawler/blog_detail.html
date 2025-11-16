@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ blog.title }} - Medium Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Back Button -->
+        <div class="mb-3">
+            <a href="{% url 'crawler:blog_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Blogs
+            </a>
+        </div>
+
+        <!-- Article Card -->
+        <div class="card shadow">
+            <div class="card-body">
+                <!-- Article Header -->
+                <div class="mb-4">
+                    <h1 class="card-title mb-3">{{ blog.title }}</h1>
+                    
+                    <div class="d-flex flex-wrap align-items-center text-muted mb-3">
+                        <div class="me-4 mb-2">
+                            <i class="fas fa-user"></i>
+                            <strong>{{ blog.author.name }}</strong>
+                        </div>
+                        
+                        {% if blog.reading_time %}
+                        <div class="me-4 mb-2">
+                            <i class="fas fa-clock"></i>
+                            {{ blog.reading_time }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if blog.claps_count > 0 %}
+                        <div class="me-4 mb-2">
+                            <i class="fas fa-thumbs-up"></i>
+                            {{ blog.claps_count }} claps
+                        </div>
+                        {% endif %}
+                        
+                        <div class="me-4 mb-2">
+                            <i class="fas fa-calendar"></i>
+                            {% if blog.published_date %}
+                                Published {{ blog.published_date|date:"F d, Y" }}
+                            {% else %}
+                                Crawled {{ blog.crawled_at|date:"F d, Y" }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="mb-3">
+                        {% for tag in blog.tags.all %}
+                            <span class="badge bg-primary me-1 mb-1">{{ tag.name }}</span>
+                        {% empty %}
+                            <span class="text-muted">No tags</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Article Content -->
+                <div class="article-content mb-4">
+                    <div class="border-start border-primary border-3 ps-3 mb-4">
+                        {% if blog.summary %}
+                            <p class="lead">{{ blog.summary }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="content-text">
+                        {{ blog.content|linebreaks }}
+                    </div>
+                </div>
+
+                <!-- Article Actions -->
+                <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                    <div>
+                        <a href="{{ blog.medium_url }}" target="_blank" class="btn btn-primary">
+                            <i class="fab fa-medium"></i> Read Original on Medium
+                        </a>
+                    </div>
+                    <div class="text-muted small">
+                        Crawled {{ blog.crawled_at|timesince }} ago
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        {% if comments %}
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-comments"></i> Comments ({{ comments.count }})
+                </h4>
+            </div>
+            <div class="card-body">
+                {% for comment in comments %}
+                <div class="mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <strong>{{ comment.author_name }}</strong>
+                        <small class="text-muted">
+                            {% if comment.published_date %}
+                                {{ comment.published_date|date:"M d, Y" }}
+                            {% else %}
+                                {{ comment.crawled_at|date:"M d, Y" }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <p class="mb-0">{{ comment.content|linebreaks }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Related Articles -->
+        <div class="card shadow mt-4">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-link"></i> Related Articles
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if related_blogs %}
+                    <div class="row">
+                        {% for related_blog in related_blogs %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <a href="{% url 'crawler:blog_detail' related_blog.id %}" class="text-decoration-none">
+                                            {{ related_blog.title|truncatechars:60 }}
+                                        </a>
+                                    </h6>
+                                    <p class="card-text text-muted small">
+                                        By {{ related_blog.author.name }}
+                                    </p>
+                                    <p class="card-text">
+                                        {{ related_blog.content|truncatechars:100 }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No related articles found.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'crawler:blog_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> All Blogs
+            </a>
+            <a href="{% url 'crawler:home' %}" class="btn btn-outline-primary">
+                <i class="fas fa-search"></i> Search More
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.article-content {
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+.content-text p {
+    margin-bottom: 1.2rem;
+}
+
+.badge {
+    font-size: 0.85rem;
+}
+</style>
+{% endblock %}

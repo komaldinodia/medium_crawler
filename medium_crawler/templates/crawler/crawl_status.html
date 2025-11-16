@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+
+{% block title %}Crawling {{ tag_name }} - Medium Crawler{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-spider spinning"></i> 
+                    Crawling Articles for: <strong>"{{ tag_name }}"</strong>
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div id="crawl-status" class="crawl-status">
+                            <h5>Status: <span id="status-text" class="text-info">Initializing...</span></h5>
+                            <div class="progress progress-container">
+                                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="10">
+                                    <span id="progress-text">0/10</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div id="timing-info">
+                            <p class="mb-1"><strong>Started:</strong> <span id="start-time">{{ current_time }}</span></p>
+                            <p class="mb-0"><strong>Duration:</strong> <span id="duration">0s</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Blog Results -->
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-list"></i> Crawled Articles
+                </h4>
+            </div>
+            <div class="card-body">
+                <div id="blogs-container">
+                    <!-- Placeholder slots for 10 blogs -->
+                    <div class="row" id="blog-slots">
+                        {% for i in "0123456789" %}
+                        <div class="col-lg-6 mb-3">
+                            <div class="card blog-slot" id="slot-{{ forloop.counter0 }}" data-slot="{{ forloop.counter0 }}">
+                                <div class="card-body text-center text-muted">
+                                    <div class="placeholder-content">
+                                        <i class="fas fa-clock fa-2x mb-2"></i>
+                                        <p class="mb-0">Pending...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="text-center mt-4" id="action-buttons" style="display: none;">
+                    <a href="{% url 'crawler:blog_list' %}?tag={{ tag_name }}" class="btn btn-primary me-2">
+                        <i class="fas fa-eye"></i> View All Results
+                    </a>
+                    <a href="{% url 'crawler:home' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-search"></i> New Search
+                    </a>
+                </div>
+
+                <!-- Error Display -->
+                <div id="error-display" class="alert alert-danger" style="display: none;">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Crawling Error</h5>
+                    <p id="error-message"></p>
+                    <button class="btn btn-outline-danger" onclick="retryCrawl()">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.spinning {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.blog-slot {
+    min-height: 180px;
+    transition: all 0.3s ease;
+}
+
+.blog-slot.filled {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border-left: 4px solid #2196f3;
+}
+
+.blog-slot.crawling {
+    background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    border-left: 4px solid #ff9800;
+}
+
+.placeholder-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 120px;
+}
+
+.blog-content h6 {
+    color: #1976d2;
+    margin-bottom: 8px;
+}
+
+.blog-meta {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.blog-summary {
+    font-size: 0.9em;
+    line-height: 1.4;
+    color: #333;
+}
+
+.tag-badges .badge {
+    margin: 1px;
+    font-size: 0.7em;
+}
+
+.pulse {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let startTime = new Date();
+let durationInterval;
+let crawlInterval;
+let currentSlot = 0;
+
+$(document).ready(function() {
+    // Start the crawl monitoring
+    startCrawlMonitoring();
+    
+    // Start duration timer
+    startDurationTimer();
+});
+
+function startCrawlMonitoring() {
+    // Mark first slot as crawling
+    markSlotAsCrawling(0);
+    
+    // Poll for updates every 2 seconds
+    crawlInterval = setInterval(function() {
+        checkCrawlProgress();
+    }, 2000);
+    
+    // Initial check
+    checkCrawlProgress();
+}
+
+function checkCrawlProgress() {
+    $.get('{% url "crawler:crawl_progress_api" tag_name %}', function(data) {
+        updateStatus(data.status);
+        updateProgress(data.blogs_found, data.total_expected);
+        
+        // Update blog slots with actual data
+        if (data.blogs && data.blogs.length > 0) {
+            data.blogs.forEach(function(blog, index) {
+                if (index < 10) {  // Only show first 10
+                    fillBlogSlot(index, blog);
+                }
+            });
+            
+            // Mark next slot as crawling if not completed
+            if (data.status === 'in_progress' && data.blogs_found < data.total_expected) {
+                markSlotAsCrawling(data.blogs_found);
+            }
+        }
+        
+        // Handle completion
+        if (data.status === 'completed') {
+            completeCrawl(data);
+        } else if (data.status === 'failed') {
+            showError(data.error_message || 'Unknown error occurred');
+        }
+        
+    }).fail(function() {
+        console.log('Error checking crawl progress');
+    });
+}
+
+function updateStatus(status) {
+    const statusText = $('#status-text');
+    const statusIcon = $('.spinning');
+    
+    switch(status) {
+        case 'in_progress':
+            statusText.text('Crawling in progress...').removeClass().addClass('text-info');
+            break;
+        case 'completed':
+            statusText.text('Crawling completed!').removeClass().addClass('text-success');
+            statusIcon.removeClass('spinning');
+            break;
+        case 'failed':
+            statusText.text('Crawling failed!').removeClass().addClass('text-danger');
+            statusIcon.removeClass('spinning');
+            break;
+        default:
+            statusText.text('Initializing...').removeClass().addClass('text-info');
+    }
+}
+
+function updateProgress(current, total) {
+    const percentage = (current / total) * 100;
+    $('#progress-bar')
+        .css('width', percentage + '%')
+        .attr('aria-valuenow', current);
+    $('#progress-text').text(current + '/' + total);
+}
+
+function markSlotAsCrawling(slotIndex) {
+    const slot = $(`#slot-${slotIndex}`);
+    if (slot.length && !slot.hasClass('filled')) {
+        slot.removeClass('blog-slot').addClass('blog-slot crawling');
+        slot.find('.placeholder-content').html(`
+            <i class="fas fa-spinner fa-spin fa-2x mb-2 text-warning"></i>
+            <p class="mb-0 text-warning">Crawling...</p>
+        `);
+    }
+}
+
+function fillBlogSlot(slotIndex, blog) {
+    const slot = $(`#slot-${slotIndex}`);
+    if (slot.length) {
+        slot.removeClass('crawling').addClass('filled');
+        
+        const tagsHtml = blog.tags.map(tag => 
+            `<span class="badge bg-secondary">${tag}</span>`
+        ).join(' ');
+        
+        slot.html(`
+            <div class="card-body blog-content">
+                <h6 class="card-title">
+                    <a href="${blog.url}" target="_blank" class="text-decoration-none">
+                        ${blog.title}
+                    </a>
+                </h6>
+                <div class="blog-meta">
+                    <i class="fas fa-user"></i> ${blog.author}
+                    ${blog.reading_time ? `| <i class="fas fa-clock"></i> ${blog.reading_time}` : ''}
+                </div>
+                <p class="blog-summary">${blog.summary}</p>
+                <div class="tag-badges mb-2">
+                    ${tagsHtml}
+                </div>
+                <small class="text-muted">
+                    Published: ${blog.published_date}
+                </small>
+            </div>
+        `);
+    }
+}
+
+function completeCrawl(data) {
+    clearInterval(crawlInterval);
+    clearInterval(durationInterval);
+    
+    // Show action buttons
+    $('#action-buttons').show();
+    
+    // Update any remaining empty slots
+    for (let i = data.blogs_found; i < 10; i++) {
+        const slot = $(`#slot-${i}`);
+        slot.removeClass('crawling').find('.placeholder-content').html(`
+            <i class="fas fa-times fa-2x mb-2 text-muted"></i>
+            <p class="mb-0 text-muted">Not found</p>
+        `);
+    }
+    
+    // Show completion message
+    if (data.blogs_found === 0) {
+        showNoResultsMessage();
+    }
+}
+
+function showError(message) {
+    clearInterval(crawlInterval);
+    clearInterval(durationInterval);
+    
+    $('#error-message').text(message);
+    $('#error-display').show();
+}
+
+function showNoResultsMessage() {
+    $('#blogs-container').prepend(`
+        <div class="alert alert-warning text-center">
+            <h5><i class="fas fa-search"></i> No Articles Found</h5>
+            <p>No articles were found for the tag "${tag_name}". Try these suggestions:</p>
+            <div class="mt-3">
+                <button class="btn btn-outline-warning btn-sm me-2" onclick="suggestTags()">
+                    <i class="fas fa-lightbulb"></i> Get Suggestions
+                </button>
+                <a href="{% url 'crawler:home' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-search"></i> Try Another Tag
+                </a>
+            </div>
+        </div>
+    `);
+}
+
+function startDurationTimer() {
+    durationInterval = setInterval(function() {
+        const now = new Date();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        $('#duration').text(elapsed + 's');
+    }, 1000);
+}
+
+function retryCrawl() {
+    location.reload();
+}
+
+function suggestTags() {
+    // This could be expanded to show actual suggestions
+    alert('Try these popular tags: programming, python, javascript, startup, technology, data-science');
+}
+</script>
+{% endblock %}

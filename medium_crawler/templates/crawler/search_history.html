@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Search History - Medium Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-history"></i> Search History
+                </h3>
+                <a href="{% url 'crawler:home' %}" class="btn btn-primary">
+                    <i class="fas fa-search"></i> New Search
+                </a>
+            </div>
+            <div class="card-body">
+                {% if page_obj.object_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-tag"></i> Tag Searched</th>
+                                    <th><i class="fas fa-list-ol"></i> Results Found</th>
+                                    <th><i class="fas fa-clock"></i> Duration</th>
+                                    <th><i class="fas fa-calendar"></i> Search Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for search in page_obj.object_list %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary">{{ search.tag_searched }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ search.results_count }} articles</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ search.crawl_duration|floatformat:1 }}s</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">
+                                            {{ search.search_time|date:"M d, Y H:i" }}
+                                            <br>
+                                            <small>({{ search.search_time|timesince }} ago)</small>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="{% url 'crawler:search_tag' %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="tag_name" value="{{ search.tag_searched }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary" title="Search again">
+                                                <i class="fas fa-redo"></i> Repeat
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav aria-label="Search history pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                                        <i class="fas fa-chevron-left"></i> Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for page_num in page_obj.paginator.page_range %}
+                                {% if page_num == page_obj.number %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% elif page_num > page_obj.number|add:'-3' and page_num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                    <!-- Summary Stats -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">{{ page_obj.paginator.count }}</h5>
+                                    <p class="card-text text-muted">Total Searches</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    {% with total_results=page_obj.object_list|length %}
+                                        <h5 class="card-title">
+                                            {% for search in page_obj.object_list %}{{ search.results_count }}{% if not forloop.last %} + {% endif %}{% endfor %}
+                                        </h5>
+                                    {% endwith %}
+                                    <p class="card-text text-muted">Articles Found</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    {% with avg_duration=page_obj.object_list.0.crawl_duration %}
+                                        <h5 class="card-title">{{ avg_duration|floatformat:1 }}s</h5>
+                                    {% endwith %}
+                                    <p class="card-text text-muted">Avg Duration</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">
+                                        {% if page_obj.object_list %}
+                                            {{ page_obj.object_list.0.search_time|date:"M d" }}
+                                        {% else %}
+                                            --
+                                        {% endif %}
+                                    </h5>
+                                    <p class="card-text text-muted">Last Search</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-history text-muted fa-3x mb-3"></i>
+                        <h4 class="text-muted">No search history yet</h4>
+                        <p class="text-muted">Start crawling some Medium articles to see your search history here!</p>
+                        <a href="{% url 'crawler:home' %}" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Start Your First Search
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
