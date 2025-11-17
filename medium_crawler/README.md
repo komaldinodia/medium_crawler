@@ -5,7 +5,25 @@
 - Dependencies 
 
 ### Running the Application
+### Create a working directory (optional)
+```cmd
+mkdir testing
+cd testing/
+```
+### Clone the repository
+```cmd
+git clone https://github.com/komaldinodia/medium_crawler.git
+```
+### Move into the project directory
+```cmd
+cd medium_crawler/
+```
+### You should see a folder named medium_crawler inside
 
+### Navigate into the actual project folder
+```cmd
+cd medium_crawler/
+```
 1. **Activate virtual environment** :
 ```cmd
 python3 -m venv venv 
@@ -73,4 +91,5 @@ python manage.py runserver
 - View "Search History" to see all previous crawl operations
 - See crawl duration and results count for each search
 - Re-run successful searches
+
 
