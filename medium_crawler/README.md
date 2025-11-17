@@ -27,7 +27,7 @@ cd medium_crawler/
 1. **Activate virtual environment** :
 ```cmd
 python3 -m venv venv 
-source venv\bin\activate
+source venv/bin/activate
 ```
 2. **Install Dependencies** :
 ```cmd
@@ -91,5 +91,6 @@ python manage.py runserver
 - View "Search History" to see all previous crawl operations
 - See crawl duration and results count for each search
 - Re-run successful searches
+
 
 
